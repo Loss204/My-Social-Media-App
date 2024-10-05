@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Social Media App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            width: 90%;
+            margin: 20px auto;
+        }
+
+        .signup-form, .login-form, .profile, .post-form {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .profile {
+            display: none;
+        }
+
+        .post {
+            background-color: #fff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .post p {
+            margin: 0;
+        }
+
+        .comments {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        .comment {
+            font-size: 0.9em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Simple Social Media App</h2>
+
+    <!-- Signup Form -->
+    <div class="signup-form">
+        <h3>Sign Up</h3>
+        <input type="text" id="signup-username" placeholder="Username" required><br><br>
+        <input type="password" id="signup-password" placeholder="Password" required><br><br>
+        <button onclick="signup()">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div class="login-form">
+        <h3>Login</h3>
+        <input type="text" id="login-username" placeholder="Username" required><br><br>
+        <input type="password" id="login-password" placeholder="Password" required><br><br>
+        <button onclick="login()">Login</button>
+    </div>
+
+    <!-- Profile Section -->
+    <div class="profile">
+        <h3>Welcome, <span id="profile-username"></span></h3>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <!-- Post Form -->
+    <div class="post-form">
+        <h3>Create a Post</h3>
+        <textarea id="post-content" placeholder="What's on your mind?" rows="3" style="width: 100%;"></textarea><br><br>
+        <button onclick="createPost()">Post</button>
+    </div>
+
+    <!-- Posts Section -->
+    <div id="posts"></div>
+</div>
+
+<script>
+    // Local storage keys
+    const USERS_KEY = "socialMediaUsers";
+    const POSTS_KEY = "socialMediaPosts";
+
+    // Global state
+    let currentUser = null;
+
+    // Sign up
+    function signup() {
+        const username = document.getElementById("signup-username").value;
+        const password = document.getElementById("signup-password").value;
+
+        if (!username || !password) {
+            alert("Please fill out all fields.");
+            return;
+        }
+
+        let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+
+        if (users.some(user => user.username === username)) {
+            alert("Username already taken.");
+            return;
+        }
+
+        users.push({ username, password });
+        localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+        alert("Sign up successful! Please log in.");
+    }
+
+    // Login
+    function login() {
+        const username = document.getElementById("login-username").value;
+        const password = document.getElementById("login-password").value;
+
+        let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+
+        const user = users.find(user => user.username === username && user.password === password);
+
+        if (!user) {
+            alert("Invalid username or password.");
+            return;
+        }
+
+        currentUser = user;
+        document.querySelector(".login-form").style.display = "none";
+        document.querySelector(".signup-form").style.display = "none";
+        document.querySelector(".profile").style.display = "block";
+        document.getElementById("profile-username").innerText = currentUser.username;
+        loadPosts();
+    }
+
+    // Logout
+    function logout() {
+        currentUser = null;
+        document.querySelector(".login-form").style.display = "block";
+        document.querySelector(".signup-form").style.display = "block";
+        document.querySelector(".profile").style.display = "none";
+        document.getElementById("posts").innerHTML = "";
+    }
+
+    // Create a post
+    function createPost() {
+        const content = document.getElementById("post-content").value;
+
+        if (!content) {
+            alert("Post content cannot be empty.");
+            return;
+        }
+
+        let posts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
+
+        posts.push({
+            username: currentUser.username,
+            content,
+            comments: []
+        });
+
+        localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+        document.getElementById("post-content").value = "";
+        loadPosts();
+    }
+
+    // Load posts
+    function loadPosts() {
+        let posts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
+        let postsContainer = document.getElementById("posts");
+
+        postsContainer.innerHTML = "";
+
+        posts.forEach((post, index) => {
+            let postDiv = document.createElement("div");
+            postDiv.classList.add("post");
+
+            postDiv.innerHTML = `
+                <p><strong>${post.username}</strong></p>
+                <p>${post.content}</p>
+                <div class="comments" id="comments-${index}">
+                    ${post.comments.map(comment => `<p class="comment"><strong>${comment.username}:</strong> ${comment.text}</p>`).join('')}
+                </div>
+                <textarea id="comment-input-${index}" placeholder="Add a comment"></textarea><br>
+                <button onclick="addComment(${index})">Comment</button>
+            `;
+
+            postsContainer.appendChild(postDiv);
+        });
+    }
+
+    // Add a comment
+    function addComment(postIndex) {
+        let posts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
+        let commentInput = document.getElementById(`comment-input-${postIndex}`).value;
+
+        if (!commentInput) {
+            alert("Comment cannot be empty.");
+            return;
+        }
+
+        posts[postIndex].comments.push({
+            username: currentUser.username,
+            text: commentInput
+        });
+
+        localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+        loadPosts();
+    }
+</script>
+
+</body>
+</html>
